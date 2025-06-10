@@ -1,36 +1,20 @@
 import tkinter as tk
 
-MORSE_NUM_DICT = {
-    '0': '-----',
-    '1': '.----',
-    '2': '..---',
-    '3': '...--',
-    '4': '....-',
-    '5': '.....',
-    '6': '-....',
-    '7': '--...',
-    '8': '---..',
-    '9': '----.',
-    '.': '.-.-.-'   
-}
-
-def convert_number_to_morse(number_str):
-    return ' '.join(MORSE_NUM_DICT.get(ch, ch) for ch in number_str)
-
-def convert_morse_to_number(morse_str):
-    morse_to_num = {v: k for k, v in MORSE_NUM_DICT.items()}
-    parts = morse_str.strip().split(' ')
-    result = ""
-    for part in parts:
-        if part in morse_to_num:
-            result += morse_to_num[part]
-        elif part in "+-*/":
-            result += part
-        elif part == "":
-            continue
+def add_commas(number_str):
+    try:
+        if "." in number_str:
+            integer, dot, decimal = number_str.partition(".")
+            num = int(integer.replace(",", ""))
+            formatted = "{:,}".format(num)
+            return formatted + dot + decimal
         else:
-            result += part
-    return result
+            num = int(number_str.replace(",", ""))
+            return "{:,}".format(num)
+    except:
+        return number_str
+
+def remove_commas(number_str):
+    return number_str.replace(",", "")
 
 class Calculator:
     def __init__(self, root):
@@ -63,48 +47,34 @@ class Calculator:
                 )
                 btn.pack(side="left", expand=True, fill="both")
 
-        self.is_morse = False
-        self.original_entry_content = ""
-        morse_button = tk.Button(
-            root,
-            text="모스변환",
-            font=("Arial", 14),
-            command=self.toggle_morse
-        )
-        morse_button.pack(pady=5)
-        self.morse_button = morse_button
-
     def on_click(self, char):
         if char == 'C':
             self.expression = ""
         elif char == '=':
             try:
-                self.expression = str(eval(self.expression))
+                result = str(eval(remove_commas(self.expression)))
+                self.expression = add_commas(result)
             except Exception:
                 self.expression = "에러"
         else:
-            self.expression += str(char)
+            temp = remove_commas(self.expression)
+            temp += str(char)
+            if char in '+-*/.':
+                self.expression = temp
+            else:
+                parts = []
+                num = ''
+                for c in temp:
+                    if c in '+-*/':
+                        if num:
+                            parts.append(add_commas(num))
+                            num = ''
+                        parts.append(c)
+                    else:
+                        num += c
+                if num:
+                    parts.append(add_commas(num))
+                self.expression = ''.join(parts)
 
         self.entry.delete(0, tk.END)
         self.entry.insert(tk.END, self.expression)
-        if getattr(self, "is_morse", False):
-            self.is_morse = False
-            self.morse_button.config(text="모스변환")
-
-    def toggle_morse(self):
-        if not self.is_morse:
-            current_display = self.entry.get()
-            if current_display != "에러":
-                self.original_entry_content = current_display
-                morse = convert_number_to_morse(current_display)
-                self.entry.delete(0, tk.END)
-                self.entry.insert(tk.END, morse)
-                self.is_morse = True
-                self.morse_button.config(text="숫자변환")
-        else:
-            morse_display = self.entry.get()
-            restored = convert_morse_to_number(morse_display)
-            self.entry.delete(0, tk.END)
-            self.entry.insert(tk.END, restored)
-            self.is_morse = False
-            self.morse_button.config(text="모스변환")
